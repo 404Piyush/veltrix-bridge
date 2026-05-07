@@ -30,10 +30,10 @@ const BRIDGE_CONFIG = {
 };
 
 const statusTone = {
-  neutral: "status neutral",
-  ok: "status ok",
-  wait: "status wait",
-  error: "status error",
+  neutral: "status status--neutral",
+  ok: "status status--ok",
+  wait: "status status--wait",
+  error: "status status--error",
 };
 
 const stripHex = (value) => value.replace(/^0x/i, "");
@@ -141,7 +141,7 @@ function App() {
   const [status, setStatus] = useState({
     tone: "neutral",
     title: "Bridge ready",
-    detail: "Connect a wallet, choose Sepolia or Veltrix L2, then submit a deposit or withdrawal.",
+    detail: "Connect wallet, load balances, then submit a deposit or withdrawal.",
   });
 
   const setBridgeStatus = (tone, title, detail) => {
@@ -281,77 +281,86 @@ function App() {
 
   return (
     <div className="app-shell">
-      <header className="topbar">
-        <div className="brand">
-          <div className="brand-mark">VX</div>
-          <div>
-            <div className="brand-title">Veltrix Bridge</div>
-            <div className="brand-subtitle">Sepolia ↔ Veltrix L2</div>
+      <header className="navbar">
+        <div className="navbar-inner">
+          <div className="brand">
+            <div className="brand-mark">VX</div>
+            <div>
+              <div className="brand-title">Veltrix Bridge</div>
+              <div className="brand-subtitle">Sepolia ↔ Veltrix L2</div>
+            </div>
           </div>
+          <nav className="nav-links">
+            <a href="#bridge">Bridge</a>
+            <a href="#activity">Activity</a>
+            <a href={BRIDGE_CONFIG.l2ExplorerRoot} target="_blank" rel="noreferrer">
+              Explorer
+            </a>
+          </nav>
+          <button className="wallet-button" type="button" onClick={connectWallet}>
+            <Wallet size={18} />
+            {account ? formatAddress(account, 10, 8) : "Connect Wallet"}
+          </button>
         </div>
-        <div className="chain-pills">
-          <span>Sepolia L1</span>
-          <span>Veltrix L2</span>
-        </div>
-        <button className="wallet-button" type="button" onClick={connectWallet}>
-          <Wallet size={18} />
-          {account ? formatAddress(account, 10, 8) : "Connect Wallet"}
-        </button>
       </header>
 
-      <main>
-        <section className="hero">
-          <div className="hero-copy">
-            <div className="eyebrow">
-              <ShieldCheck size={15} />
-              Production bridge dashboard
+      <main className="page">
+        <section className="section card" id="bridge">
+          <div className="section-header">
+            <div>
+              <h1>Bridge ETH between Sepolia and Veltrix L2</h1>
+              <p>
+                One clean flow: connect wallet, check balances, deposit or withdraw, then track transaction status from the
+                activity panel.
+              </p>
             </div>
-            <h1>Move ETH between Sepolia and Veltrix L2.</h1>
-            <p>
-              Connect your wallet, deposit through OptimismPortal, initiate withdrawals on Veltrix L2, and track every
-              transaction with direct explorer links.
-            </p>
-            <div className="hero-actions">
-              <button
-                type="button"
-                className="secondary-action"
-                onClick={() => refreshBalance(BRIDGE_CONFIG.l1ChainId, setL1Balance, "Sepolia")}
-              >
-                Load Sepolia Balance
-              </button>
-              <button
-                type="button"
-                className="secondary-action"
-                onClick={() => refreshBalance(BRIDGE_CONFIG.l2ChainId, setL2Balance, "Veltrix L2")}
-              >
-                Load Veltrix L2 Balance
-              </button>
-              <a href={BRIDGE_CONFIG.l2ExplorerRoot} target="_blank" rel="noreferrer">
-                Open Veltrix Explorer <ExternalLink size={16} />
-              </a>
-            </div>
-            <div className="info-strip">
-              <span>Path: Sepolia L1 → Veltrix L2</span>
-              <span>Contracts: Portal + MessagePasser</span>
+            <div className="network-tags">
+              <span>Sepolia L1</span>
+              <span>Veltrix L2</span>
             </div>
           </div>
 
-          <aside className="readiness-card">
-            <div className={statusTone[status.tone]}>
-              <strong>{status.title}</strong>
-              <span>{status.detail}</span>
+          <div className="section-content">
+            <div className="overview-left">
+              <div className="eyebrow">
+                <ShieldCheck size={15} />
+                Bridge controls
+              </div>
+              <div className="hero-actions">
+                <button
+                  type="button"
+                  className="secondary-button"
+                  onClick={() => refreshBalance(BRIDGE_CONFIG.l1ChainId, setL1Balance, "Sepolia")}
+                >
+                  Load Sepolia Balance
+                </button>
+                <button
+                  type="button"
+                  className="secondary-button"
+                  onClick={() => refreshBalance(BRIDGE_CONFIG.l2ChainId, setL2Balance, "Veltrix L2")}
+                >
+                  Load Veltrix L2 Balance
+                </button>
+                <a href={BRIDGE_CONFIG.l2ExplorerRoot} target="_blank" rel="noreferrer">
+                  Open Veltrix Explorer <ExternalLink size={16} />
+                </a>
+              </div>
             </div>
-            <div className="balance-grid">
-              <BalanceCard icon={Landmark} label="Sepolia" value={l1Balance} detail="L1 wallet balance" />
-              <BalanceCard icon={Layers3} label="Veltrix L2" value={l2Balance} detail="L2 wallet balance" />
-            </div>
-            <a className="status-link" href={BRIDGE_CONFIG.l2ExplorerRoot} target="_blank" rel="noreferrer">
-              Open Veltrix Explorer <ExternalLink size={16} />
-            </a>
-          </aside>
+
+            <aside className="status-panel">
+              <div className={statusTone[status.tone]}>
+                <strong>{status.title}</strong>
+                <span>{status.detail}</span>
+              </div>
+              <div className="balance-grid">
+                <BalanceCard icon={Landmark} label="Sepolia" value={l1Balance} detail="L1 wallet balance" />
+                <BalanceCard icon={Layers3} label="Veltrix L2" value={l2Balance} detail="L2 wallet balance" />
+              </div>
+            </aside>
+          </div>
         </section>
 
-        <section className="bridge-grid">
+        <section className="grid-two">
           <BridgeCard
             icon={ArrowDownToLine}
             title="Deposit to Veltrix"
@@ -374,7 +383,7 @@ function App() {
           />
         </section>
 
-        <section className="details-grid">
+        <section className="grid-two" id="activity">
           <Panel title="Recent Bridge Activity">
             {transactions.length ? (
               <div className="tx-list">
@@ -407,12 +416,25 @@ function App() {
           </Panel>
         </section>
 
-        <section className="contract-strip">
-          <ContractLine label="OptimismPortalProxy" value={BRIDGE_CONFIG.optimismPortal} />
-          <ContractLine label="L2ToL1MessagePasser" value={BRIDGE_CONFIG.l2ToL1MessagePasser} />
-          <ContractLine label="Veltrix RPC" value={BRIDGE_CONFIG.l2RpcUrl} />
+        <section className="section card">
+          <h2>Contracts & RPC</h2>
+          <div className="contract-strip">
+            <ContractLine label="OptimismPortalProxy" value={BRIDGE_CONFIG.optimismPortal} />
+            <ContractLine label="L2ToL1MessagePasser" value={BRIDGE_CONFIG.l2ToL1MessagePasser} />
+            <ContractLine label="Veltrix RPC" value={BRIDGE_CONFIG.l2RpcUrl} />
+          </div>
         </section>
       </main>
+
+      <footer className="footer">
+        <div className="footer-inner">
+          <span>Veltrix Bridge</span>
+          <span>Sepolia L1 ↔ Veltrix L2</span>
+          <a href={BRIDGE_CONFIG.l2ExplorerRoot} target="_blank" rel="noreferrer">
+            Explorer
+          </a>
+        </div>
+      </footer>
     </div>
   );
 }
@@ -430,7 +452,7 @@ function BalanceCard({ icon: Icon, label, value, detail }) {
 
 function BridgeCard({ icon: Icon, title, description, amount, setAmount, actionLabel, pending, onSubmit }) {
   return (
-    <article className="bridge-card">
+    <article className="bridge-card card">
       <div className="card-heading">
         <div className="card-icon">
           <Icon size={20} />
@@ -457,7 +479,7 @@ function BridgeCard({ icon: Icon, title, description, amount, setAmount, actionL
 
 function Panel({ title, children }) {
   return (
-    <article className="panel">
+    <article className="panel card">
       <h2>{title}</h2>
       {children}
     </article>
