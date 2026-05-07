@@ -1,18 +1,15 @@
 import { useState } from "react";
 import {
   ArrowDownToLine,
-  ArrowUpRight,
   ArrowRight,
   ArrowUpFromLine,
   BadgeCheck,
-  CircleDot,
   Clock3,
   Copy,
   ExternalLink,
   Gauge,
   Landmark,
   Layers3,
-  Sparkles,
   ShieldCheck,
   Wallet,
 } from "lucide-react";
@@ -292,9 +289,9 @@ function App() {
             <div className="brand-subtitle">Sepolia ↔ Veltrix L2</div>
           </div>
         </div>
-        <div className="topbar-pills">
-          <span>Live RPC</span>
-          <span>OP Stack</span>
+        <div className="chain-pills">
+          <span>Sepolia L1</span>
+          <span>Veltrix L2</span>
         </div>
         <button className="wallet-button" type="button" onClick={connectWallet}>
           <Wallet size={18} />
@@ -306,13 +303,13 @@ function App() {
         <section className="hero">
           <div className="hero-copy">
             <div className="eyebrow">
-              <Sparkles size={15} />
-              Bridge dashboard
+              <ShieldCheck size={15} />
+              Production bridge dashboard
             </div>
-            <h1>Bridge ETH with confidence, not guesswork.</h1>
+            <h1>Move ETH between Sepolia and Veltrix L2.</h1>
             <p>
-              Clean, fast actions for deposits and withdrawals with clear chain feedback. Submit from this page, track every
-              hash, and jump straight into explorer links.
+              Connect your wallet, deposit through OptimismPortal, initiate withdrawals on Veltrix L2, and track every
+              transaction with direct explorer links.
             </p>
             <div className="hero-actions">
               <button
@@ -330,13 +327,12 @@ function App() {
                 Load Veltrix L2 Balance
               </button>
               <a href={BRIDGE_CONFIG.l2ExplorerRoot} target="_blank" rel="noreferrer">
-                Open Explorer <ExternalLink size={16} />
+                Open Veltrix Explorer <ExternalLink size={16} />
               </a>
             </div>
-            <div className="hero-metrics">
-              <MetricPill icon={Landmark} label="Source" value="Sepolia L1" />
-              <MetricPill icon={Layers3} label="Destination" value="Veltrix L2" />
-              <MetricPill icon={ShieldCheck} label="Bridge path" value="Portal + MessagePasser" />
+            <div className="info-strip">
+              <span>Path: Sepolia L1 → Veltrix L2</span>
+              <span>Contracts: Portal + MessagePasser</span>
             </div>
           </div>
 
@@ -350,7 +346,7 @@ function App() {
               <BalanceCard icon={Layers3} label="Veltrix L2" value={l2Balance} detail="L2 wallet balance" />
             </div>
             <a className="status-link" href={BRIDGE_CONFIG.l2ExplorerRoot} target="_blank" rel="noreferrer">
-              Open Veltrix explorer <ArrowUpRight size={16} />
+              Open Veltrix Explorer <ExternalLink size={16} />
             </a>
           </aside>
         </section>
@@ -401,13 +397,13 @@ function App() {
           <Panel title="Withdrawal Lifecycle">
             <Step
               icon={BadgeCheck}
-              title="Initiate"
-              text="Send withdrawal tx on Veltrix L2 through L2ToL1MessagePasser."
+              title="1. Initiate withdrawal"
+              text="Send your withdrawal transaction on Veltrix L2."
               active
             />
-            <Step icon={Gauge} title="Output posted" text="Wait until proposer output covers your withdrawal block." active />
-            <Step icon={Clock3} title="Prove on L1" text="Prove the message on Sepolia once output is available." />
-            <Step icon={ShieldCheck} title="Finalize" text="Finalize on Sepolia after dispute-game maturity." />
+            <Step icon={Gauge} title="2. Wait for output" text="Wait until proposer output includes your withdrawal block." active />
+            <Step icon={Clock3} title="3. Prove on Sepolia" text="Prove the withdrawal once output is available." />
+            <Step icon={ShieldCheck} title="4. Finalize on Sepolia" text="Finalize after the dispute-game maturity window." />
           </Panel>
         </section>
 
@@ -417,18 +413,6 @@ function App() {
           <ContractLine label="Veltrix RPC" value={BRIDGE_CONFIG.l2RpcUrl} />
         </section>
       </main>
-    </div>
-  );
-}
-
-function MetricPill({ icon: Icon, label, value }) {
-  return (
-    <div className="metric-pill">
-      <Icon size={16} />
-      <div>
-        <small>{label}</small>
-        <strong>{value}</strong>
-      </div>
     </div>
   );
 }
@@ -483,7 +467,9 @@ function Panel({ title, children }) {
 function Step({ icon: Icon, title, text, active = false }) {
   return (
     <div className={`step ${active ? "active" : ""}`}>
-      <div className="step-dot">{active ? <CircleDot size={16} /> : <Icon size={16} />}</div>
+      <div className="step-dot">
+        <Icon size={16} />
+      </div>
       <div>
         <strong>{title}</strong>
         <span>{text}</span>
