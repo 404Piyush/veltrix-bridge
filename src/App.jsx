@@ -23,6 +23,9 @@ const BRIDGE_CONFIG = {
   l2RpcUrl: import.meta.env.VITE_L2_RPC_URL || "https://veltrix-rpc.404piyush.me",
   l2ExplorerUrl: import.meta.env.VITE_L2_EXPLORER_URL || "https://veltrix-explorer.404piyush.me/tx/",
   l2ExplorerRoot: import.meta.env.VITE_L2_EXPLORER_ROOT || "https://veltrix-explorer.404piyush.me",
+  l2NativeName: import.meta.env.VITE_L2_NATIVE_NAME || "Ether",
+  l2NativeSymbol: import.meta.env.VITE_L2_NATIVE_SYMBOL || "ETH",
+  l2NativeDecimals: Number(import.meta.env.VITE_L2_NATIVE_DECIMALS || "18"),
   optimismPortal: "0x9d6954E55297f9ae78e5c0dc2353c18b31aeA0b3",
   l2ToL1MessagePasser: "0x4200000000000000000000000000000000000016",
   depositGasLimit: 100000n,
@@ -102,6 +105,26 @@ const getWalletProvider = () => {
   return window.ethereum;
 };
 
+const buildL2ChainParams = (symbol = BRIDGE_CONFIG.l2NativeSymbol) => ({
+  chainId: BRIDGE_CONFIG.l2ChainId,
+  chainName: BRIDGE_CONFIG.l2ChainName,
+  nativeCurrency: {
+    name: BRIDGE_CONFIG.l2NativeName,
+    symbol,
+    decimals: BRIDGE_CONFIG.l2NativeDecimals,
+  },
+  rpcUrls: [BRIDGE_CONFIG.l2RpcUrl],
+  blockExplorerUrls: [BRIDGE_CONFIG.l2ExplorerRoot],
+});
+
+const addL2ChainToWallet = async (provider, symbol = BRIDGE_CONFIG.l2NativeSymbol) => {
+  await provider.request({
+    method: "wallet_addEthereumChain",
+    params: [buildL2ChainParams(symbol)],
+  });
+  return symbol;
+};
+
 const switchNetwork = async (chainId) => {
   const provider = getWalletProvider();
 
@@ -110,23 +133,23 @@ const switchNetwork = async (chainId) => {
       method: "wallet_switchEthereumChain",
       params: [{ chainId }],
     });
+    return { added: false, symbol: null };
   } catch (error) {
     if (error.code !== 4902 || chainId !== BRIDGE_CONFIG.l2ChainId) {
       throw error;
     }
 
-    await provider.request({
-      method: "wallet_addEthereumChain",
-      params: [
-        {
-          chainId: BRIDGE_CONFIG.l2ChainId,
-          chainName: BRIDGE_CONFIG.l2ChainName,
-          nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
-          rpcUrls: [BRIDGE_CONFIG.l2RpcUrl],
-          blockExplorerUrls: [BRIDGE_CONFIG.l2ExplorerRoot],
-        },
-      ],
-    });
+    try {
+      const symbol = await addL2ChainToWallet(provider, BRIDGE_CONFIG.l2NativeSymbol);
+      return { added: true, symbol };
+    } catch (addError) {
+      // ChainId 0xa455 collides with public chain metadata (pegglecoin) in some wallets.
+      if (BRIDGE_CONFIG.l2ChainId === "0xa455" && BRIDGE_CONFIG.l2NativeSymbol.toLowerCase() !== "peggle") {
+        const symbol = await addL2ChainToWallet(provider, "peggle");
+        return { added: true, symbol };
+      }
+      throw addError;
+    }
   }
 };
 
@@ -180,8 +203,16 @@ function App() {
 
   const addVeltrixNetwork = async () => {
     try {
-      await switchNetwork(BRIDGE_CONFIG.l2ChainId);
-      setBridgeStatus("ok", "Veltrix L2 ready", "Wallet is now on Veltrix L2 (or already had it configured).");
+      const result = await switchNetwork(BRIDGE_CONFIG.l2ChainId);
+      if (result.added && result.symbol && result.symbol.toLowerCase() !== BRIDGE_CONFIG.l2NativeSymbol.toLowerCase()) {
+        setBridgeStatus(
+          "wait",
+          "Veltrix L2 added with wallet-required symbol",
+          `Wallet required "${result.symbol}" for chain ${BRIDGE_CONFIG.l2ChainId}. This is a chain-id metadata collision, not a bridge failure.`,
+        );
+      } else {
+        setBridgeStatus("ok", "Veltrix L2 ready", "Wallet is now on Veltrix L2 (or already had it configured).");
+      }
     } catch (error) {
       setBridgeStatus("error", "Veltrix L2 setup failed", error.message);
     }

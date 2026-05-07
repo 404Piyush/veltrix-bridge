@@ -63,7 +63,12 @@ cp .env.example .env.local
 VITE_L2_RPC_URL=https://veltrix-rpc.404piyush.me
 VITE_L2_EXPLORER_URL=https://veltrix-explorer.404piyush.me/tx/
 VITE_L2_EXPLORER_ROOT=https://veltrix-explorer.404piyush.me
+VITE_L2_NATIVE_NAME=Ether
+VITE_L2_NATIVE_SYMBOL=ETH
+VITE_L2_NATIVE_DECIMALS=18
 ```
+
+If your wallet rejects `wallet_addEthereumChain` with a native symbol mismatch for chain `0xa455`, override `VITE_L2_NATIVE_SYMBOL` to the symbol your wallet expects.
 
 ## Usage
 
