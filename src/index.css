@@ -17,9 +17,9 @@
   --line: #24314d;
   --text: #e6eefb;
   --muted: #97a7c4;
-  --brand: #7c8cff;
-  --brand-strong: #6f81ff;
-  --brand-soft: rgba(124, 140, 255, 0.14);
+  --brand: #facc15;
+  --brand-strong: #eab308;
+  --brand-soft: rgba(250, 204, 21, 0.14);
   --success: #22c55e;
   --warn: #eab308;
   --danger: #f87171;
@@ -35,7 +35,7 @@ body {
   min-height: 100vh;
   color: var(--text);
   background:
-    radial-gradient(circle at top right, rgba(124, 140, 255, 0.14), transparent 28rem),
+    radial-gradient(circle at top right, rgba(250, 204, 21, 0.12), transparent 28rem),
     var(--bg);
 }
 
@@ -239,7 +239,7 @@ h1 {
   gap: 8px;
   border: 1px solid var(--line);
   background: var(--brand-soft);
-  color: #c9d4ff;
+  color: #fef3c7;
   border-radius: 999px;
   padding: 8px 12px;
   font-size: 12px;
@@ -417,7 +417,7 @@ h1 {
   margin-top: 16px;
   border-color: var(--brand);
   background: var(--brand);
-  color: #fff;
+  color: #1f1a00;
   padding: 12px 16px;
   font-weight: 700;
 }
@@ -425,6 +425,7 @@ h1 {
 .primary-action:hover {
   border-color: var(--brand-strong);
   background: var(--brand-strong);
+  color: #1f1a00;
 }
 
 .tx-list {
@@ -462,8 +463,8 @@ h1 {
 .tx-row span {
   width: fit-content;
   border: 1px solid #3b4b72;
-  background: rgba(124, 140, 255, 0.12);
-  color: #c9d4ff;
+  background: rgba(250, 204, 21, 0.14);
+  color: #fde68a;
   border-radius: 999px;
   padding: 4px 8px;
   font-size: 11px;
@@ -585,7 +586,7 @@ h1 {
 }
 
 .footer-inner a {
-  color: #c9d4ff;
+  color: #fde68a;
   text-decoration: none;
   font-weight: 600;
 }
