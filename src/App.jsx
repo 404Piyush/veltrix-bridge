@@ -180,22 +180,10 @@ function App() {
 
   const addVeltrixNetwork = async () => {
     try {
-      const provider = getWalletProvider();
-      await provider.request({
-        method: "wallet_addEthereumChain",
-        params: [
-          {
-            chainId: BRIDGE_CONFIG.l2ChainId,
-            chainName: BRIDGE_CONFIG.l2ChainName,
-            nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
-            rpcUrls: [BRIDGE_CONFIG.l2RpcUrl],
-            blockExplorerUrls: [BRIDGE_CONFIG.l2ExplorerRoot],
-          },
-        ],
-      });
-      setBridgeStatus("ok", "Veltrix L2 added", "Network was added to wallet. You can switch to Veltrix L2 any time.");
+      await switchNetwork(BRIDGE_CONFIG.l2ChainId);
+      setBridgeStatus("ok", "Veltrix L2 ready", "Wallet is now on Veltrix L2 (or already had it configured).");
     } catch (error) {
-      setBridgeStatus("error", "Add network failed", error.message);
+      setBridgeStatus("error", "Veltrix L2 setup failed", error.message);
     }
   };
 
