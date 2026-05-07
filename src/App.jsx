@@ -1,15 +1,18 @@
 import { useState } from "react";
 import {
   ArrowDownToLine,
+  ArrowUpRight,
   ArrowRight,
   ArrowUpFromLine,
   BadgeCheck,
+  CircleDot,
   Clock3,
   Copy,
   ExternalLink,
   Gauge,
   Landmark,
   Layers3,
+  Sparkles,
   ShieldCheck,
   Wallet,
 } from "lucide-react";
@@ -282,12 +285,18 @@ function App() {
   return (
     <div className="app-shell">
       <header className="topbar">
-        <div className="brand-mark">VX</div>
-        <div>
-          <div className="brand-title">Veltrix Bridge</div>
-          <div className="brand-subtitle">Sepolia to Veltrix L2</div>
+        <div className="brand">
+          <div className="brand-mark">VX</div>
+          <div>
+            <div className="brand-title">Veltrix Bridge</div>
+            <div className="brand-subtitle">Sepolia ↔ Veltrix L2</div>
+          </div>
         </div>
-        <button className="wallet-button" onClick={connectWallet}>
+        <div className="topbar-pills">
+          <span>Live RPC</span>
+          <span>OP Stack</span>
+        </div>
+        <button className="wallet-button" type="button" onClick={connectWallet}>
           <Wallet size={18} />
           {account ? formatAddress(account, 10, 8) : "Connect Wallet"}
         </button>
@@ -297,21 +306,38 @@ function App() {
         <section className="hero">
           <div className="hero-copy">
             <div className="eyebrow">
-              <ShieldCheck size={16} />
-              OP Stack testnet bridge
+              <Sparkles size={15} />
+              Bridge dashboard
             </div>
-            <h1>Move ETH between Sepolia and Veltrix without touching scripts.</h1>
+            <h1>Bridge ETH with confidence, not guesswork.</h1>
             <p>
-              Deposit through OptimismPortal, initiate L2 withdrawals, and keep proof/finality status visible as the rollup
-              stack advances.
+              Clean, fast actions for deposits and withdrawals with clear chain feedback. Submit from this page, track every
+              hash, and jump straight into explorer links.
             </p>
-	            <div className="hero-actions">
-	              <button onClick={() => refreshBalance(BRIDGE_CONFIG.l1ChainId, setL1Balance, "Sepolia")}>Load Sepolia Balance</button>
-	              <button onClick={() => refreshBalance(BRIDGE_CONFIG.l2ChainId, setL2Balance, "Veltrix L2")}>Load L2 Balance</button>
-	              <a href={BRIDGE_CONFIG.l2ExplorerRoot} target="_blank" rel="noreferrer">
-	                Open Explorer <ExternalLink size={16} />
-	              </a>
-	            </div>
+            <div className="hero-actions">
+              <button
+                type="button"
+                className="secondary-action"
+                onClick={() => refreshBalance(BRIDGE_CONFIG.l1ChainId, setL1Balance, "Sepolia")}
+              >
+                Load Sepolia Balance
+              </button>
+              <button
+                type="button"
+                className="secondary-action"
+                onClick={() => refreshBalance(BRIDGE_CONFIG.l2ChainId, setL2Balance, "Veltrix L2")}
+              >
+                Load Veltrix L2 Balance
+              </button>
+              <a href={BRIDGE_CONFIG.l2ExplorerRoot} target="_blank" rel="noreferrer">
+                Open Explorer <ExternalLink size={16} />
+              </a>
+            </div>
+            <div className="hero-metrics">
+              <MetricPill icon={Landmark} label="Source" value="Sepolia L1" />
+              <MetricPill icon={Layers3} label="Destination" value="Veltrix L2" />
+              <MetricPill icon={ShieldCheck} label="Bridge path" value="Portal + MessagePasser" />
+            </div>
           </div>
 
           <aside className="readiness-card">
@@ -320,30 +346,33 @@ function App() {
               <span>{status.detail}</span>
             </div>
             <div className="balance-grid">
-              <BalanceCard icon={Landmark} label="Sepolia L1" value={l1Balance} detail="Source chain" />
-              <BalanceCard icon={Layers3} label="Veltrix L2" value={l2Balance} detail="Rollup chain" />
+              <BalanceCard icon={Landmark} label="Sepolia" value={l1Balance} detail="L1 wallet balance" />
+              <BalanceCard icon={Layers3} label="Veltrix L2" value={l2Balance} detail="L2 wallet balance" />
             </div>
+            <a className="status-link" href={BRIDGE_CONFIG.l2ExplorerRoot} target="_blank" rel="noreferrer">
+              Open Veltrix explorer <ArrowUpRight size={16} />
+            </a>
           </aside>
         </section>
 
         <section className="bridge-grid">
           <BridgeCard
             icon={ArrowDownToLine}
-            title="Deposit ETH"
-            description="Move ETH from Sepolia L1 into the same account on Veltrix L2."
+            title="Deposit to Veltrix"
+            description="Send ETH from Sepolia into the same wallet on Veltrix L2 through OptimismPortal."
             amount={depositAmount}
             setAmount={setDepositAmount}
-            actionLabel="Deposit From Sepolia"
+            actionLabel="Deposit from Sepolia"
             pending={pendingAction === "deposit"}
             onSubmit={submitDeposit}
           />
           <BridgeCard
             icon={ArrowUpFromLine}
-            title="Withdraw ETH"
-            description="Start an L2 withdrawal. Proof and finalization follow output publication and dispute-game maturity."
+            title="Withdraw to Sepolia"
+            description="Initiate an L2 withdrawal now. Proof and finalization follow chain readiness windows."
             amount={withdrawAmount}
             setAmount={setWithdrawAmount}
-            actionLabel="Start L2 Withdrawal"
+            actionLabel="Start withdrawal"
             pending={pendingAction === "withdraw"}
             onSubmit={submitWithdrawal}
           />
@@ -365,24 +394,41 @@ function App() {
                 ))}
               </div>
             ) : (
-              <EmptyState label="Submitted bridge transactions will appear here." />
+              <EmptyState label="Your submitted bridge transactions will appear here." />
             )}
           </Panel>
 
           <Panel title="Withdrawal Lifecycle">
-            <Step icon={BadgeCheck} title="1. Initiate" text="Submit the MessagePasser withdrawal on Veltrix L2." active />
-            <Step icon={Gauge} title="2. Output proposed" text="Wait for proposer output to cover the withdrawal block." active />
-            <Step icon={Clock3} title="3. Prove" text="Prove the withdrawal on Sepolia after output publication." />
-            <Step icon={ShieldCheck} title="4. Finalize" text="Finalize after the dispute-game clock matures." />
+            <Step
+              icon={BadgeCheck}
+              title="Initiate"
+              text="Send withdrawal tx on Veltrix L2 through L2ToL1MessagePasser."
+              active
+            />
+            <Step icon={Gauge} title="Output posted" text="Wait until proposer output covers your withdrawal block." active />
+            <Step icon={Clock3} title="Prove on L1" text="Prove the message on Sepolia once output is available." />
+            <Step icon={ShieldCheck} title="Finalize" text="Finalize on Sepolia after dispute-game maturity." />
           </Panel>
         </section>
 
         <section className="contract-strip">
           <ContractLine label="OptimismPortalProxy" value={BRIDGE_CONFIG.optimismPortal} />
           <ContractLine label="L2ToL1MessagePasser" value={BRIDGE_CONFIG.l2ToL1MessagePasser} />
-          <ContractLine label="L2 RPC" value={BRIDGE_CONFIG.l2RpcUrl} />
+          <ContractLine label="Veltrix RPC" value={BRIDGE_CONFIG.l2RpcUrl} />
         </section>
       </main>
+    </div>
+  );
+}
+
+function MetricPill({ icon: Icon, label, value }) {
+  return (
+    <div className="metric-pill">
+      <Icon size={16} />
+      <div>
+        <small>{label}</small>
+        <strong>{value}</strong>
+      </div>
     </div>
   );
 }
@@ -417,7 +463,7 @@ function BridgeCard({ icon: Icon, title, description, amount, setAmount, actionL
           <span>ETH</span>
         </div>
       </label>
-      <button className="primary-action" disabled={pending} onClick={onSubmit}>
+      <button className="primary-action" type="button" disabled={pending} onClick={onSubmit}>
         {pending ? "Waiting for wallet..." : actionLabel}
         {!pending && <ArrowRight size={18} />}
       </button>
@@ -437,7 +483,7 @@ function Panel({ title, children }) {
 function Step({ icon: Icon, title, text, active = false }) {
   return (
     <div className={`step ${active ? "active" : ""}`}>
-      <Icon size={18} />
+      <div className="step-dot">{active ? <CircleDot size={16} /> : <Icon size={16} />}</div>
       <div>
         <strong>{title}</strong>
         <span>{text}</span>
@@ -448,7 +494,7 @@ function Step({ icon: Icon, title, text, active = false }) {
 
 function ContractLine({ label, value }) {
   return (
-    <button className="contract-line" onClick={() => copyText(value)}>
+    <button className="contract-line" type="button" onClick={() => copyText(value)}>
       <span>{label}</span>
       <strong>{value}</strong>
       <Copy size={15} />
