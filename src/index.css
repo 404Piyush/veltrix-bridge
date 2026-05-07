@@ -132,6 +132,7 @@ button:disabled {
 }
 
 .wallet-button,
+.network-button,
 .secondary-button,
 .hero-actions a,
 .primary-action {
@@ -161,6 +162,20 @@ button:disabled {
   color: var(--text);
   padding: 10px 14px;
   font-weight: 600;
+}
+
+.network-button {
+  border-color: #574500;
+  background: rgba(250, 204, 21, 0.14);
+  color: #fde68a;
+  padding: 10px 14px;
+  font-weight: 700;
+}
+
+.navbar-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .page {
@@ -604,7 +619,7 @@ h1 {
     grid-template-columns: auto 1fr;
   }
 
-  .wallet-button {
+  .navbar-actions {
     grid-column: 1 / -1;
     width: fit-content;
   }
