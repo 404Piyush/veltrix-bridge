@@ -1,52 +1,94 @@
 # Veltrix Bridge
 
-Standalone user-facing bridge frontend for the Veltrix Sepolia L2.
+User-facing bridge frontend for moving ETH between **Sepolia L1** and **Veltrix L2**.
 
-## Status
+![Build](https://img.shields.io/github/actions/workflow/status/404Piyush/veltrix-bridge/ci.yml?branch=main&label=build)
+![Version](https://img.shields.io/badge/version-0.1.0-blue)
+![Stack](https://img.shields.io/badge/stack-React%20%2B%20Vite-646CFF)
 
-Functional for the first bridge milestone:
+**Live app:** https://veltrix-bridge.vercel.app
 
-```text
-Connect wallet -> load balances -> deposit ETH -> initiate withdrawal
+## Features
+
+- Connect EIP-1193 wallets (MetaMask-compatible).
+- Load ETH balances on Sepolia L1 and Veltrix L2.
+- Deposit ETH via `OptimismPortal.depositTransaction`.
+- Initiate withdrawals via `L2ToL1MessagePasser.initiateWithdrawal`.
+- Track recent submitted bridge transactions with explorer deep links.
+
+## Architecture
+
+```mermaid
+flowchart LR
+  W[Wallet / EIP-1193] --> UI[Veltrix Bridge UI]
+  UI --> L1[Sepolia RPC]
+  UI --> L2[Veltrix RPC]
+  UI --> OP[OptimismPortal]
+  UI --> MP[L2ToL1MessagePasser]
+  UI --> EX[Veltrix Explorer]
 ```
 
-The UI is intentionally not final. We will come back later for visual polish, indexed transaction tracking, proof actions, and finalization actions.
+## Tech Stack
 
-## Run
+### Frontend
+- React
+- Vite
+- Lucide React
+
+### Tooling
+- ESLint
+- GitHub Actions
+- Vercel
+
+## Installation
 
 ```bash
+git clone https://github.com/404Piyush/veltrix-bridge.git
+cd veltrix-bridge
 npm install
 npm run dev
 ```
 
 Open `http://localhost:5173`.
 
-Optional local env:
+## Environment Variables
+
+Copy `.env.example` and override values only when needed:
 
 ```bash
 cp .env.example .env.local
 ```
 
-## Current Scope
-
-- Connect an EIP-1193 wallet such as MetaMask.
-- Load Sepolia L1 and Veltrix L2 balances.
-- Deposit ETH from Sepolia through `OptimismPortal.depositTransaction`.
-- Initiate ETH withdrawals on Veltrix L2 through `L2ToL1MessagePasser.initiateWithdrawal`.
-
-Proof and finalization are still handled by the repo scripts until the next bridge UI milestone.
-
-## Production URLs
-
-The default production config points at the live Veltrix services:
-
-```text
+```env
 VITE_L2_RPC_URL=https://veltrix-rpc.404piyush.me
 VITE_L2_EXPLORER_URL=https://veltrix-explorer.404piyush.me/tx/
 VITE_L2_EXPLORER_ROOT=https://veltrix-explorer.404piyush.me
 ```
 
-For Vercel, set those env vars in the project if overriding defaults. Browsers will block wallet RPC calls from an HTTPS site to an insecure `http://localhost` RPC.
+## Usage
+
+1. Connect wallet.
+2. Load Sepolia and Veltrix balances.
+3. Deposit from Sepolia or initiate withdrawal from Veltrix.
+4. Open transaction links from the activity panel for chain confirmation.
+
+## Contracts and Network Defaults
+
+| Item | Value |
+| --- | --- |
+| Sepolia Chain ID | `0xaa36a7` |
+| Veltrix L2 Chain ID | `0xa455` |
+| OptimismPortal | `0x9d6954E55297f9ae78e5c0dc2353c18b31aeA0b3` |
+| L2ToL1MessagePasser | `0x4200000000000000000000000000000000000016` |
+| Veltrix RPC | `https://veltrix-rpc.404piyush.me` |
+| Veltrix Explorer | `https://veltrix-explorer.404piyush.me` |
+
+## CI
+
+The repository runs CI on pushes and pull requests to `main`:
+
+- `npm run lint`
+- `npm run build`
 
 ## Deploy
 
@@ -55,3 +97,35 @@ npm run lint
 npm run build
 npx vercel --prod
 ```
+
+## Folder Structure
+
+```text
+.
+├── .github
+│   ├── ISSUE_TEMPLATE
+│   └── workflows
+├── assets
+├── screenshots
+├── src
+│   ├── App.jsx
+│   ├── index.css
+│   └── main.jsx
+├── .env.example
+└── README.md
+```
+
+## Roadmap
+
+- Add withdrawal proof and finalization actions in UI.
+- Add on-chain lifecycle state display from chain data.
+- Improve transaction history depth and filtering.
+- Add domain-level deployment docs and operational runbooks.
+
+## Contributing
+
+See [CONTRIBUTING.md](./CONTRIBUTING.md).
+
+## Security
+
+See [SECURITY.md](./SECURITY.md).
