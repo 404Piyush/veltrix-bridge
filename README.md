@@ -14,6 +14,8 @@ User-facing bridge frontend for moving ETH between **Sepolia L1** and **Veltrix 
 - Load ETH balances on Sepolia L1 and Veltrix L2.
 - Deposit ETH via `OptimismPortal.depositTransaction`.
 - Initiate withdrawals via `L2ToL1MessagePasser.initiateWithdrawal`.
+- Resolve withdrawal lifecycle (initiated → prove readiness → finalize readiness → finalized) from live chain state.
+- Submit `proveWithdrawalTransaction` and `finalizeWithdrawalTransaction` directly from the UI.
 - Track recent submitted bridge transactions with explorer deep links.
 
 ## Architecture
@@ -66,6 +68,8 @@ VITE_L2_EXPLORER_ROOT=https://veltrix-explorer.404piyush.me
 VITE_L2_NATIVE_NAME=Ether
 VITE_L2_NATIVE_SYMBOL=ETH
 VITE_L2_NATIVE_DECIMALS=18
+VITE_OPTIMISM_PORTAL=0x9d6954E55297f9ae78e5c0dc2353c18b31aeA0b3
+VITE_L2_MESSAGE_PASSER=0x4200000000000000000000000000000000000016
 ```
 
 If your wallet rejects `wallet_addEthereumChain` with a native symbol mismatch for chain `0xa455`, override `VITE_L2_NATIVE_SYMBOL` to the symbol your wallet expects.
@@ -76,6 +80,7 @@ If your wallet rejects `wallet_addEthereumChain` with a native symbol mismatch f
 2. Load Sepolia and Veltrix balances.
 3. Deposit from Sepolia or initiate withdrawal from Veltrix.
 4. Open transaction links from the activity panel for chain confirmation.
+5. Use **Refresh lifecycle**, **Prove withdrawal**, and **Finalize withdrawal** in the lifecycle panel.
 
 ## Contracts and Network Defaults
 
@@ -122,8 +127,8 @@ npx vercel --prod
 
 ## Roadmap
 
-- Add withdrawal proof and finalization actions in UI.
-- Add on-chain lifecycle state display from chain data.
+- Add clearer waiting reason buckets (output root wait, game maturity wait, finality delay wait).
+- Add persisted history of prove/finalize transactions.
 - Improve transaction history depth and filtering.
 - Add domain-level deployment docs and operational runbooks.
 

@@ -13,10 +13,12 @@ import {
   ShieldCheck,
   Wallet,
 } from "lucide-react";
+import { ethers } from "ethers";
 
 const BRIDGE_CONFIG = {
   l1ChainId: "0xaa36a7",
   l1ChainName: "Sepolia",
+  l1RpcUrl: import.meta.env.VITE_L1_RPC_URL || "https://ethereum-sepolia-rpc.publicnode.com",
   l1Explorer: "https://sepolia.etherscan.io/tx/",
   l2ChainId: "0xa455",
   l2ChainName: "Veltrix Sepolia L2",
@@ -26,11 +28,33 @@ const BRIDGE_CONFIG = {
   l2NativeName: import.meta.env.VITE_L2_NATIVE_NAME || "Ether",
   l2NativeSymbol: import.meta.env.VITE_L2_NATIVE_SYMBOL || "ETH",
   l2NativeDecimals: Number(import.meta.env.VITE_L2_NATIVE_DECIMALS || "18"),
-  optimismPortal: "0x9d6954E55297f9ae78e5c0dc2353c18b31aeA0b3",
-  l2ToL1MessagePasser: "0x4200000000000000000000000000000000000016",
+  optimismPortal: import.meta.env.VITE_OPTIMISM_PORTAL || "0x9d6954E55297f9ae78e5c0dc2353c18b31aeA0b3",
+  l2ToL1MessagePasser: import.meta.env.VITE_L2_MESSAGE_PASSER || "0x4200000000000000000000000000000000000016",
   depositGasLimit: 100000n,
   withdrawalGasLimit: 100000n,
 };
+
+const MESSAGE_PASSED_TOPIC = ethers.id("MessagePassed(uint256,address,address,uint256,uint256,bytes,bytes32)");
+const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
+
+const portalAbi = [
+  "function finalizedWithdrawals(bytes32) view returns (bool)",
+  "function provenWithdrawals(bytes32,address) view returns (address disputeGameProxy, uint64 timestamp)",
+  "function respectedGameType() view returns (uint32)",
+  "function disputeGameFactory() view returns (address)",
+  "function checkWithdrawal(bytes32,address) view",
+  "function proveWithdrawalTransaction((uint256 nonce,address sender,address target,uint256 value,uint256 gasLimit,bytes data) _tx,uint256 _disputeGameIndex,(bytes32 version,bytes32 stateRoot,bytes32 messagePasserStorageRoot,bytes32 latestBlockhash) _outputRootProof,bytes[] _withdrawalProof)",
+  "function finalizeWithdrawalTransaction((uint256 nonce,address sender,address target,uint256 value,uint256 gasLimit,bytes data) _tx)",
+];
+
+const disputeFactoryAbi = [
+  "function gameCount() view returns (uint256)",
+  "function findLatestGames(uint32,uint256,uint256) view returns ((uint256 index,bytes32 metadata,uint64 timestamp,bytes32 rootClaim,bytes extraData)[])",
+];
+
+const messagePasserIface = new ethers.Interface([
+  "event MessagePassed(uint256 indexed nonce,address indexed sender,address indexed target,uint256 value,uint256 gasLimit,bytes data,bytes32 withdrawalHash)",
+]);
 
 const statusTone = {
   neutral: "status status--neutral",
@@ -143,7 +167,6 @@ const switchNetwork = async (chainId) => {
       const symbol = await addL2ChainToWallet(provider, BRIDGE_CONFIG.l2NativeSymbol);
       return { added: true, symbol };
     } catch (addError) {
-      // ChainId 0xa455 collides with public chain metadata (pegglecoin) in some wallets.
       if (BRIDGE_CONFIG.l2ChainId === "0xa455" && BRIDGE_CONFIG.l2NativeSymbol.toLowerCase() !== "peggle") {
         const symbol = await addL2ChainToWallet(provider, "peggle");
         return { added: true, symbol };
@@ -151,6 +174,178 @@ const switchNetwork = async (chainId) => {
       throw addError;
     }
   }
+};
+
+const rpcJson = async (url, method, params = []) => {
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ jsonrpc: "2.0", id: Date.now(), method, params }),
+  });
+  if (!response.ok) {
+    throw new Error(`RPC ${method} failed: HTTP ${response.status}`);
+  }
+  const body = await response.json();
+  if (body.error) {
+    throw new Error(body.error.message || `RPC ${method} error`);
+  }
+  return body.result;
+};
+
+const toBlockTag = (n) => `0x${BigInt(n).toString(16)}`;
+
+const makeWithdrawalHash = (wdTx) => {
+  const encoded = ethers.AbiCoder.defaultAbiCoder().encode(
+    ["uint256", "address", "address", "uint256", "uint256", "bytes"],
+    [wdTx.nonce, wdTx.sender, wdTx.target, wdTx.value, wdTx.gasLimit, wdTx.data],
+  );
+  return ethers.keccak256(encoded);
+};
+
+const parseWithdrawalFromReceipt = (receipt) => {
+  const log = receipt.logs.find(
+    (entry) =>
+      entry.address?.toLowerCase() === BRIDGE_CONFIG.l2ToL1MessagePasser.toLowerCase() &&
+      entry.topics?.[0]?.toLowerCase() === MESSAGE_PASSED_TOPIC.toLowerCase(),
+  );
+  if (!log) {
+    throw new Error("MessagePassed log not found in withdrawal tx receipt.");
+  }
+  const parsed = messagePasserIface.parseLog({ topics: log.topics, data: log.data });
+  const wdTx = {
+    nonce: parsed.args.nonce,
+    sender: parsed.args.sender,
+    target: parsed.args.target,
+    value: parsed.args.value,
+    gasLimit: parsed.args.gasLimit,
+    data: parsed.args.data,
+  };
+  return {
+    wdTx,
+    withdrawalHash: makeWithdrawalHash(wdTx),
+    l2BlockNumber: BigInt(receipt.blockNumber),
+  };
+};
+
+const getLifecycleFromChain = async ({ withdrawalTxHash, account }) => {
+  const l1Provider = new ethers.JsonRpcProvider(BRIDGE_CONFIG.l1RpcUrl);
+  const portal = new ethers.Contract(BRIDGE_CONFIG.optimismPortal, portalAbi, l1Provider);
+
+  const l2Receipt = await rpcJson(BRIDGE_CONFIG.l2RpcUrl, "eth_getTransactionReceipt", [withdrawalTxHash]);
+  if (!l2Receipt) {
+    throw new Error("Withdrawal transaction receipt not found on L2 yet.");
+  }
+
+  const parsed = parseWithdrawalFromReceipt(l2Receipt);
+  const finalized = await portal.finalizedWithdrawals(parsed.withdrawalHash);
+
+  const respectedGameType = await portal.respectedGameType();
+  const disputeFactoryAddress = await portal.disputeGameFactory();
+  const disputeFactory = new ethers.Contract(disputeFactoryAddress, disputeFactoryAbi, l1Provider);
+  const gameCount = await disputeFactory.gameCount();
+
+  if (gameCount === 0n) {
+    return {
+      ...parsed,
+      respectedGameType,
+      disputeFactoryAddress,
+      proveReady: false,
+      finalizeReady: false,
+      proveReason: "No dispute game published yet.",
+      finalizeReason: "Not proven yet.",
+      finalized,
+      proven: false,
+    };
+  }
+
+  const latestGames = await disputeFactory.findLatestGames(respectedGameType, gameCount - 1n, 1n);
+  if (!latestGames.length) {
+    return {
+      ...parsed,
+      respectedGameType,
+      disputeFactoryAddress,
+      proveReady: false,
+      finalizeReady: false,
+      proveReason: "No respected dispute game found yet.",
+      finalizeReason: "Not proven yet.",
+      finalized,
+      proven: false,
+    };
+  }
+
+  const game = latestGames[0];
+  const gameL2Block = BigInt(game.extraData.slice(0, 66));
+  if (parsed.l2BlockNumber > gameL2Block) {
+    return {
+      ...parsed,
+      respectedGameType,
+      disputeFactoryAddress,
+      game,
+      proveReady: false,
+      finalizeReady: false,
+      proveReason: `Waiting for output/dispute game to cover L2 block ${parsed.l2BlockNumber.toString()}. Latest covered: ${gameL2Block.toString()}.`,
+      finalizeReason: "Not proven yet.",
+      finalized,
+      proven: false,
+    };
+  }
+
+  const provenData = await portal.provenWithdrawals(parsed.withdrawalHash, account);
+  const proven = provenData.disputeGameProxy && provenData.disputeGameProxy !== ZERO_ADDRESS;
+
+  let finalizeReady = false;
+  let finalizeReason = "Not proven yet.";
+  if (proven) {
+    try {
+      await portal.checkWithdrawal.staticCall(parsed.withdrawalHash, account);
+      finalizeReady = true;
+      finalizeReason = "Ready to finalize.";
+    } catch (error) {
+      finalizeReason = error.shortMessage || error.message;
+    }
+  }
+
+  return {
+    ...parsed,
+    respectedGameType,
+    disputeFactoryAddress,
+    game,
+    gameL2Block,
+    proveReady: !proven && !finalized,
+    finalizeReady: !finalized && finalizeReady,
+    proveReason: proven ? "Already proven by this wallet." : "Ready to prove.",
+    finalizeReason,
+    finalized,
+    proven,
+  };
+};
+
+const buildProveParams = async (lifecycle) => {
+  const output = await rpcJson(BRIDGE_CONFIG.l2RpcUrl, "optimism_outputAtBlock", [toBlockTag(lifecycle.gameL2Block)]);
+  const l2Block = await rpcJson(BRIDGE_CONFIG.l2RpcUrl, "eth_getBlockByNumber", [toBlockTag(lifecycle.gameL2Block), false]);
+
+  const slot = ethers.keccak256(ethers.concat([lifecycle.withdrawalHash, ethers.zeroPadValue("0x00", 32)]));
+  const proof = await rpcJson(BRIDGE_CONFIG.l2RpcUrl, "eth_getProof", [
+    BRIDGE_CONFIG.l2ToL1MessagePasser,
+    [slot],
+    toBlockTag(lifecycle.gameL2Block),
+  ]);
+
+  if (!proof.storageProof?.length) {
+    throw new Error("No storage proof returned for withdrawal slot.");
+  }
+
+  return {
+    withdrawalTx: lifecycle.wdTx,
+    disputeGameIndex: lifecycle.game.index,
+    outputRootProof: {
+      version: ethers.ZeroHash,
+      stateRoot: output.stateRoot || l2Block.stateRoot,
+      messagePasserStorageRoot: output.withdrawalStorageRoot || proof.storageHash,
+      latestBlockhash: output.blockRef?.hash || l2Block.hash,
+    },
+    withdrawalProof: proof.storageProof[0].proof,
+  };
 };
 
 function App() {
@@ -161,6 +356,8 @@ function App() {
   const [l2Balance, setL2Balance] = useState("");
   const [pendingAction, setPendingAction] = useState("");
   const [transactions, setTransactions] = useState([]);
+  const [lastWithdrawalTx, setLastWithdrawalTx] = useState("");
+  const [lifecycle, setLifecycle] = useState(null);
   const [status, setStatus] = useState({
     tone: "neutral",
     title: "Bridge ready",
@@ -175,9 +372,7 @@ function App() {
     const provider = getWalletProvider();
     const accounts = await provider.request({ method: "eth_requestAccounts" });
     const selectedAccount = accounts[0];
-    if (!selectedAccount) {
-      throw new Error("No wallet account selected.");
-    }
+    if (!selectedAccount) throw new Error("No wallet account selected.");
     setAccount(selectedAccount);
     return selectedAccount;
   };
@@ -238,6 +433,21 @@ function App() {
     setTransactions((current) => [entry, ...current].slice(0, 8));
   };
 
+  const loadWithdrawalLifecycle = async (txHash = lastWithdrawalTx) => {
+    if (!txHash) {
+      setBridgeStatus("error", "Lifecycle unavailable", "No withdrawal tx hash found yet.");
+      return;
+    }
+    try {
+      const address = await getActiveAccount();
+      const data = await getLifecycleFromChain({ withdrawalTxHash: txHash, account: address });
+      setLifecycle(data);
+      setBridgeStatus("ok", "Withdrawal lifecycle updated", `Withdrawal hash ${formatAddress(data.withdrawalHash, 12, 10)} loaded.`);
+    } catch (error) {
+      setBridgeStatus("error", "Lifecycle load failed", error.message);
+    }
+  };
+
   const submitDeposit = async () => {
     try {
       const provider = getWalletProvider();
@@ -255,14 +465,7 @@ function App() {
       setBridgeStatus("wait", "Confirm Sepolia deposit", "Approve the OptimismPortal transaction in your wallet.");
       const txHash = await provider.request({
         method: "eth_sendTransaction",
-        params: [
-          {
-            from,
-            to: BRIDGE_CONFIG.optimismPortal,
-            value: toQuantityHex(valueWei),
-            data,
-          },
-        ],
+        params: [{ from, to: BRIDGE_CONFIG.optimismPortal, value: toQuantityHex(valueWei), data }],
       });
 
       addTransaction({
@@ -295,14 +498,7 @@ function App() {
       setBridgeStatus("wait", "Confirm L2 withdrawal", "Approve the L2ToL1MessagePasser transaction in your wallet.");
       const txHash = await provider.request({
         method: "eth_sendTransaction",
-        params: [
-          {
-            from,
-            to: BRIDGE_CONFIG.l2ToL1MessagePasser,
-            value: toQuantityHex(valueWei),
-            data,
-          },
-        ],
+        params: [{ from, to: BRIDGE_CONFIG.l2ToL1MessagePasser, value: toQuantityHex(valueWei), data }],
       });
 
       addTransaction({
@@ -311,9 +507,74 @@ function App() {
         href: `${BRIDGE_CONFIG.l2ExplorerUrl}${txHash}`,
         detail: `${withdrawAmount} ETH withdrawal initiated`,
       });
-      setBridgeStatus("ok", "Withdrawal initiated", "Next: prove after an output covers this L2 block, then finalize after dispute-game maturity.");
+      setLastWithdrawalTx(txHash);
+      setBridgeStatus("ok", "Withdrawal initiated", "Lifecycle loaded. Next step is prove once output/dispute game covers the block.");
+      await loadWithdrawalLifecycle(txHash);
     } catch (error) {
       setBridgeStatus("error", "Withdrawal failed", error.message);
+    } finally {
+      setPendingAction("");
+    }
+  };
+
+  const proveWithdrawal = async () => {
+    if (!lastWithdrawalTx) {
+      setBridgeStatus("error", "Prove unavailable", "No withdrawal tx hash available.");
+      return;
+    }
+    try {
+      setPendingAction("prove");
+      setBridgeStatus("wait", "Preparing proof", "Building withdrawal proof and output root proof from chain data.");
+      const address = await getActiveAccount();
+      const fresh = await getLifecycleFromChain({ withdrawalTxHash: lastWithdrawalTx, account: address });
+      if (!fresh.proveReady) {
+        throw new Error(fresh.proveReason || "Withdrawal is not ready to prove.");
+      }
+
+      const proveParams = await buildProveParams(fresh);
+      await switchNetwork(BRIDGE_CONFIG.l1ChainId);
+      const browserProvider = new ethers.BrowserProvider(getWalletProvider());
+      const signer = await browserProvider.getSigner();
+      const portal = new ethers.Contract(BRIDGE_CONFIG.optimismPortal, portalAbi, signer);
+      const tx = await portal.proveWithdrawalTransaction(
+        proveParams.withdrawalTx,
+        proveParams.disputeGameIndex,
+        proveParams.outputRootProof,
+        proveParams.withdrawalProof,
+      );
+      await tx.wait();
+      setBridgeStatus("ok", "Withdrawal proven", `Prove tx submitted: ${tx.hash}`);
+      await loadWithdrawalLifecycle(lastWithdrawalTx);
+    } catch (error) {
+      setBridgeStatus("error", "Prove failed", error.shortMessage || error.message);
+    } finally {
+      setPendingAction("");
+    }
+  };
+
+  const finalizeWithdrawal = async () => {
+    if (!lastWithdrawalTx) {
+      setBridgeStatus("error", "Finalize unavailable", "No withdrawal tx hash available.");
+      return;
+    }
+    try {
+      setPendingAction("finalize");
+      const address = await getActiveAccount();
+      const fresh = await getLifecycleFromChain({ withdrawalTxHash: lastWithdrawalTx, account: address });
+      if (!fresh.finalizeReady) {
+        throw new Error(fresh.finalizeReason || "Withdrawal is not ready to finalize.");
+      }
+
+      await switchNetwork(BRIDGE_CONFIG.l1ChainId);
+      const browserProvider = new ethers.BrowserProvider(getWalletProvider());
+      const signer = await browserProvider.getSigner();
+      const portal = new ethers.Contract(BRIDGE_CONFIG.optimismPortal, portalAbi, signer);
+      const tx = await portal.finalizeWithdrawalTransaction(fresh.wdTx);
+      await tx.wait();
+      setBridgeStatus("ok", "Withdrawal finalized", `Finalize tx submitted: ${tx.hash}`);
+      await loadWithdrawalLifecycle(lastWithdrawalTx);
+    } catch (error) {
+      setBridgeStatus("error", "Finalize failed", error.shortMessage || error.message);
     } finally {
       setPendingAction("");
     }
@@ -355,8 +616,8 @@ function App() {
             <div>
               <h1>Bridge ETH between Sepolia and Veltrix L2</h1>
               <p>
-                One clean flow: connect wallet, check balances, deposit or withdraw, then track transaction status from the
-                activity panel.
+                Connect wallet, deposit or withdraw, then prove and finalize directly from chain-derived withdrawal lifecycle
+                state.
               </p>
             </div>
             <div className="network-tags">
@@ -419,7 +680,7 @@ function App() {
           <BridgeCard
             icon={ArrowUpFromLine}
             title="Withdraw to Sepolia"
-            description="Initiate an L2 withdrawal now. Proof and finalization follow chain readiness windows."
+            description="Initiate L2 withdrawal, then prove and finalize using the lifecycle panel."
             amount={withdrawAmount}
             setAmount={setWithdrawAmount}
             actionLabel="Start withdrawal"
@@ -449,15 +710,41 @@ function App() {
           </Panel>
 
           <Panel title="Withdrawal Lifecycle">
+            <div className="hero-actions">
+              <button className="secondary-button" type="button" onClick={() => loadWithdrawalLifecycle()} disabled={!lastWithdrawalTx}>
+                Refresh lifecycle
+              </button>
+              <button className="secondary-button" type="button" onClick={proveWithdrawal} disabled={pendingAction === "prove"}>
+                {pendingAction === "prove" ? "Proving..." : "Prove withdrawal"}
+              </button>
+              <button className="secondary-button" type="button" onClick={finalizeWithdrawal} disabled={pendingAction === "finalize"}>
+                {pendingAction === "finalize" ? "Finalizing..." : "Finalize withdrawal"}
+              </button>
+            </div>
             <Step
               icon={BadgeCheck}
-              title="1. Initiate withdrawal"
-              text="Send your withdrawal transaction on Veltrix L2."
-              active
+              title="1. Initiated"
+              text={lastWithdrawalTx ? `L2 tx: ${formatAddress(lastWithdrawalTx, 12, 10)}` : "Start an L2 withdrawal first."}
+              active={Boolean(lastWithdrawalTx)}
             />
-            <Step icon={Gauge} title="2. Wait for output" text="Wait until proposer output includes your withdrawal block." active />
-            <Step icon={Clock3} title="3. Prove on Sepolia" text="Prove the withdrawal once output is available." />
-            <Step icon={ShieldCheck} title="4. Finalize on Sepolia" text="Finalize after the dispute-game maturity window." />
+            <Step
+              icon={Gauge}
+              title="2. Prove status"
+              text={lifecycle ? lifecycle.proveReason : "Run refresh to resolve prove readiness from chain."}
+              active={Boolean(lifecycle?.proveReady || lifecycle?.proven)}
+            />
+            <Step
+              icon={Clock3}
+              title="3. Finalize status"
+              text={lifecycle ? lifecycle.finalizeReason : "Run refresh to resolve finalization readiness from chain."}
+              active={Boolean(lifecycle?.finalizeReady || lifecycle?.finalized)}
+            />
+            <Step
+              icon={ShieldCheck}
+              title="4. Finalized"
+              text={lifecycle?.finalized ? "Withdrawal is finalized on Sepolia." : "Not finalized yet."}
+              active={Boolean(lifecycle?.finalized)}
+            />
           </Panel>
         </section>
 
@@ -466,7 +753,7 @@ function App() {
           <div className="contract-strip">
             <ContractLine label="OptimismPortalProxy" value={BRIDGE_CONFIG.optimismPortal} />
             <ContractLine label="L2ToL1MessagePasser" value={BRIDGE_CONFIG.l2ToL1MessagePasser} />
-            <ContractLine label="Veltrix RPC" value={BRIDGE_CONFIG.l2RpcUrl} />
+            <ContractLine label="L2 RPC" value={BRIDGE_CONFIG.l2RpcUrl} />
           </div>
         </section>
       </main>
