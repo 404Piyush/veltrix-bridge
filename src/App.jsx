@@ -20,7 +20,7 @@ const BRIDGE_CONFIG = {
   l1ChainName: "Sepolia",
   l1RpcUrl: import.meta.env.VITE_L1_RPC_URL || "https://ethereum-sepolia-rpc.publicnode.com",
   l1Explorer: "https://sepolia.etherscan.io/tx/",
-  l2ChainId: "0xce608",
+  l2ChainId: import.meta.env.VITE_L2_CHAIN_ID || "0xa455",
   l2ChainName: "Veltrix Sepolia L2",
   l2RpcUrl: import.meta.env.VITE_L2_RPC_URL || "https://veltrix-rpc.404piyush.me",
   l2ExplorerUrl: import.meta.env.VITE_L2_EXPLORER_URL || "https://veltrix-explorer.404piyush.me/tx/",
@@ -622,8 +622,9 @@ function App() {
                 state.
               </p>
               <p className="chain-warning">
-                Veltrix now uses chain ID <strong>845320 (0xce608)</strong> to avoid wallet metadata conflicts. Approve network
-                add requests only when RPC matches <strong>veltrix-rpc.404piyush.me</strong>.
+                Migration target is chain ID <strong>845320 (0xce608)</strong>. Until RPC cutover is complete, keep
+                <strong> VITE_L2_CHAIN_ID</strong> aligned with the RPC response and approve network add requests only when RPC
+                matches <strong>veltrix-rpc.404piyush.me</strong>.
               </p>
             </div>
             <div className="network-tags">

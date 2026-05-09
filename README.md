@@ -63,6 +63,7 @@ cp .env.example .env.local
 
 ```env
 VITE_L2_RPC_URL=https://veltrix-rpc.404piyush.me
+VITE_L2_CHAIN_ID=0xce608
 VITE_L2_EXPLORER_URL=https://veltrix-explorer.404piyush.me/tx/
 VITE_L2_EXPLORER_ROOT=https://veltrix-explorer.404piyush.me
 VITE_L2_NATIVE_NAME=Veltrix
@@ -72,7 +73,7 @@ VITE_OPTIMISM_PORTAL=0x9d6954E55297f9ae78e5c0dc2353c18b31aeA0b3
 VITE_L2_MESSAGE_PASSER=0x4200000000000000000000000000000000000016
 ```
 
-Veltrix uses chain ID `0xce608` (`845320`) to avoid chain-list collisions in wallet metadata.
+Set `VITE_L2_CHAIN_ID` to the chain ID currently returned by your Veltrix RPC. Target migration value is `0xce608` (`845320`).
 
 ## Usage
 
@@ -87,7 +88,7 @@ Veltrix uses chain ID `0xce608` (`845320`) to avoid chain-list collisions in wal
 | Item | Value |
 | --- | --- |
 | Sepolia Chain ID | `0xaa36a7` |
-| Veltrix L2 Chain ID | `0xce608` (`845320`) |
+| Veltrix L2 Chain ID | `VITE_L2_CHAIN_ID` (target: `0xce608` / `845320`) |
 | OptimismPortal | `0x9d6954E55297f9ae78e5c0dc2353c18b31aeA0b3` |
 | L2ToL1MessagePasser | `0x4200000000000000000000000000000000000016` |
 | Veltrix RPC | `https://veltrix-rpc.404piyush.me` |
