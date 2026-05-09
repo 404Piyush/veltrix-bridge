@@ -218,6 +218,22 @@ h1 {
   font-size: 16px;
 }
 
+.chain-warning {
+  margin-top: 12px;
+  max-width: 760px;
+  border: 1px solid rgba(234, 179, 8, 0.36);
+  background: rgba(250, 204, 21, 0.08);
+  color: #fde68a;
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.chain-warning strong {
+  color: #fef3c7;
+}
+
 .network-tags {
   display: flex;
   gap: 8px;

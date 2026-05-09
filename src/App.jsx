@@ -116,6 +116,12 @@ const formatAddress = (address, head = 8, tail = 6) => {
   return `${address.slice(0, head)}...${address.slice(-tail)}`;
 };
 
+const alertSuccess = (title, txHash, explorerUrl) => {
+  if (typeof window === "undefined") return;
+  const txLink = `${explorerUrl}${txHash}`;
+  window.alert(`${title}\n\nTx: ${txHash}\n\nExplorer: ${txLink}`);
+};
+
 const copyText = async (value) => {
   if (navigator.clipboard) {
     await navigator.clipboard.writeText(value);
@@ -474,6 +480,7 @@ function App() {
         href: `${BRIDGE_CONFIG.l1Explorer}${txHash}`,
         detail: `${depositAmount} ETH sent to OptimismPortal`,
       });
+      alertSuccess("Deposit submitted successfully.", txHash, BRIDGE_CONFIG.l1Explorer);
       setBridgeStatus("ok", "Deposit submitted", "Wait for Sepolia derivation; L2 balance credits after the deposit block becomes safe.");
     } catch (error) {
       setBridgeStatus("error", "Deposit failed", error.message);
@@ -508,6 +515,7 @@ function App() {
         detail: `${withdrawAmount} ETH withdrawal initiated`,
       });
       setLastWithdrawalTx(txHash);
+      alertSuccess("Withdrawal initiated successfully.", txHash, BRIDGE_CONFIG.l2ExplorerUrl);
       setBridgeStatus("ok", "Withdrawal initiated", "Lifecycle loaded. Next step is prove once output/dispute game covers the block.");
       await loadWithdrawalLifecycle(txHash);
     } catch (error) {
@@ -543,6 +551,7 @@ function App() {
         proveParams.withdrawalProof,
       );
       await tx.wait();
+      alertSuccess("Withdrawal proved successfully.", tx.hash, BRIDGE_CONFIG.l1Explorer);
       setBridgeStatus("ok", "Withdrawal proven", `Prove tx submitted: ${tx.hash}`);
       await loadWithdrawalLifecycle(lastWithdrawalTx);
     } catch (error) {
@@ -571,6 +580,7 @@ function App() {
       const portal = new ethers.Contract(BRIDGE_CONFIG.optimismPortal, portalAbi, signer);
       const tx = await portal.finalizeWithdrawalTransaction(fresh.wdTx);
       await tx.wait();
+      alertSuccess("Withdrawal finalized successfully.", tx.hash, BRIDGE_CONFIG.l1Explorer);
       setBridgeStatus("ok", "Withdrawal finalized", `Finalize tx submitted: ${tx.hash}`);
       await loadWithdrawalLifecycle(lastWithdrawalTx);
     } catch (error) {
@@ -618,6 +628,11 @@ function App() {
               <p>
                 Connect wallet, deposit or withdraw, then prove and finalize directly from chain-derived withdrawal lifecycle
                 state.
+              </p>
+              <p className="chain-warning">
+                Wallet warning in your screenshot is expected: chain ID <strong>42069</strong> is already claimed in public
+                wallet metadata as pegglecoin/peggle. Keep the Veltrix RPC URL and approve only if it matches
+                <strong> veltrix-rpc.404piyush.me</strong>.
               </p>
             </div>
             <div className="network-tags">
