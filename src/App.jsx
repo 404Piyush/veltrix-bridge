@@ -622,7 +622,6 @@ function App() {
                 state.
               </p>
               <p className="chain-warning">
-                Veltrix chain ID is <strong>845320 (0xce608)</strong>. Keep <strong>VITE_L2_CHAIN_ID</strong> aligned with your
                 RPC and approve network add requests only when RPC matches <strong>veltrix-rpc.404piyush.me</strong>.
               </p>
             </div>
