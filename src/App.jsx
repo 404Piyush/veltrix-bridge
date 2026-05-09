@@ -20,7 +20,7 @@ const BRIDGE_CONFIG = {
   l1ChainName: "Sepolia",
   l1RpcUrl: import.meta.env.VITE_L1_RPC_URL || "https://ethereum-sepolia-rpc.publicnode.com",
   l1Explorer: "https://sepolia.etherscan.io/tx/",
-  l2ChainId: import.meta.env.VITE_L2_CHAIN_ID || "0xa455",
+  l2ChainId: import.meta.env.VITE_L2_CHAIN_ID || "0xce608",
   l2ChainName: "Veltrix Sepolia L2",
   l2RpcUrl: import.meta.env.VITE_L2_RPC_URL || "https://veltrix-rpc.404piyush.me",
   l2ExplorerUrl: import.meta.env.VITE_L2_EXPLORER_URL || "https://veltrix-explorer.404piyush.me/tx/",
@@ -28,7 +28,7 @@ const BRIDGE_CONFIG = {
   l2NativeName: import.meta.env.VITE_L2_NATIVE_NAME || "Veltrix",
   l2NativeSymbol: import.meta.env.VITE_L2_NATIVE_SYMBOL || "VEL",
   l2NativeDecimals: Number(import.meta.env.VITE_L2_NATIVE_DECIMALS || "18"),
-  optimismPortal: import.meta.env.VITE_OPTIMISM_PORTAL || "0x9d6954E55297f9ae78e5c0dc2353c18b31aeA0b3",
+  optimismPortal: import.meta.env.VITE_OPTIMISM_PORTAL || "0x229Fa2F406ff759Bc763988b4c3CBbbC2C5e0934",
   l2ToL1MessagePasser: import.meta.env.VITE_L2_MESSAGE_PASSER || "0x4200000000000000000000000000000000000016",
   depositGasLimit: 100000n,
   withdrawalGasLimit: 100000n,
@@ -622,9 +622,8 @@ function App() {
                 state.
               </p>
               <p className="chain-warning">
-                Migration target is chain ID <strong>845320 (0xce608)</strong>. Until RPC cutover is complete, keep
-                <strong> VITE_L2_CHAIN_ID</strong> aligned with the RPC response and approve network add requests only when RPC
-                matches <strong>veltrix-rpc.404piyush.me</strong>.
+                Veltrix chain ID is <strong>845320 (0xce608)</strong>. Keep <strong>VITE_L2_CHAIN_ID</strong> aligned with your
+                RPC and approve network add requests only when RPC matches <strong>veltrix-rpc.404piyush.me</strong>.
               </p>
             </div>
             <div className="network-tags">

@@ -73,7 +73,7 @@ VITE_OPTIMISM_PORTAL=0x9d6954E55297f9ae78e5c0dc2353c18b31aeA0b3
 VITE_L2_MESSAGE_PASSER=0x4200000000000000000000000000000000000016
 ```
 
-Set `VITE_L2_CHAIN_ID` to the chain ID currently returned by your Veltrix RPC. Target migration value is `0xce608` (`845320`).
+Set `VITE_L2_CHAIN_ID` to the chain ID currently returned by your Veltrix RPC (`0xce608` / `845320`).
 
 ## Usage
 
@@ -88,8 +88,8 @@ Set `VITE_L2_CHAIN_ID` to the chain ID currently returned by your Veltrix RPC. T
 | Item | Value |
 | --- | --- |
 | Sepolia Chain ID | `0xaa36a7` |
-| Veltrix L2 Chain ID | `VITE_L2_CHAIN_ID` (target: `0xce608` / `845320`) |
-| OptimismPortal | `0x9d6954E55297f9ae78e5c0dc2353c18b31aeA0b3` |
+| Veltrix L2 Chain ID | `VITE_L2_CHAIN_ID` (`0xce608` / `845320`) |
+| OptimismPortal | `0x229Fa2F406ff759Bc763988b4c3CBbbC2C5e0934` |
 | L2ToL1MessagePasser | `0x4200000000000000000000000000000000000016` |
 | Veltrix RPC | `https://veltrix-rpc.404piyush.me` |
 | Veltrix Explorer | `https://veltrix-explorer.404piyush.me` |
