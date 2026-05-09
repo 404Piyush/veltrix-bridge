@@ -1,6 +1,6 @@
 # Veltrix Bridge
 
-User-facing bridge frontend for moving ETH between **Sepolia L1** and **Veltrix L2**.
+User-facing bridge frontend for moving **VEL** between **Sepolia L1** and **Veltrix L2**.
 
 ![Build](https://img.shields.io/github/actions/workflow/status/404Piyush/veltrix-bridge/ci.yml?branch=main&label=build)
 ![Version](https://img.shields.io/badge/version-0.1.0-blue)
@@ -11,8 +11,8 @@ User-facing bridge frontend for moving ETH between **Sepolia L1** and **Veltrix 
 ## Features
 
 - Connect EIP-1193 wallets (MetaMask-compatible).
-- Load ETH balances on Sepolia L1 and Veltrix L2.
-- Deposit ETH via `OptimismPortal.depositTransaction`.
+- Load VEL balances on Sepolia L1 and Veltrix L2.
+- Deposit VEL via `OptimismPortal.depositTransaction`.
 - Initiate withdrawals via `L2ToL1MessagePasser.initiateWithdrawal`.
 - Resolve withdrawal lifecycle (initiated → prove readiness → finalize readiness → finalized) from live chain state.
 - Submit `proveWithdrawalTransaction` and `finalizeWithdrawalTransaction` directly from the UI.
@@ -65,14 +65,14 @@ cp .env.example .env.local
 VITE_L2_RPC_URL=https://veltrix-rpc.404piyush.me
 VITE_L2_EXPLORER_URL=https://veltrix-explorer.404piyush.me/tx/
 VITE_L2_EXPLORER_ROOT=https://veltrix-explorer.404piyush.me
-VITE_L2_NATIVE_NAME=Ether
-VITE_L2_NATIVE_SYMBOL=ETH
+VITE_L2_NATIVE_NAME=Veltrix
+VITE_L2_NATIVE_SYMBOL=VEL
 VITE_L2_NATIVE_DECIMALS=18
 VITE_OPTIMISM_PORTAL=0x9d6954E55297f9ae78e5c0dc2353c18b31aeA0b3
 VITE_L2_MESSAGE_PASSER=0x4200000000000000000000000000000000000016
 ```
 
-If your wallet rejects `wallet_addEthereumChain` with a native symbol mismatch for chain `0xa455`, override `VITE_L2_NATIVE_SYMBOL` to the symbol your wallet expects.
+Veltrix uses chain ID `0xce608` (`845320`) to avoid chain-list collisions in wallet metadata.
 
 ## Usage
 
@@ -87,7 +87,7 @@ If your wallet rejects `wallet_addEthereumChain` with a native symbol mismatch f
 | Item | Value |
 | --- | --- |
 | Sepolia Chain ID | `0xaa36a7` |
-| Veltrix L2 Chain ID | `0xa455` |
+| Veltrix L2 Chain ID | `0xce608` (`845320`) |
 | OptimismPortal | `0x9d6954E55297f9ae78e5c0dc2353c18b31aeA0b3` |
 | L2ToL1MessagePasser | `0x4200000000000000000000000000000000000016` |
 | Veltrix RPC | `https://veltrix-rpc.404piyush.me` |

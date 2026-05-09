@@ -20,13 +20,13 @@ const BRIDGE_CONFIG = {
   l1ChainName: "Sepolia",
   l1RpcUrl: import.meta.env.VITE_L1_RPC_URL || "https://ethereum-sepolia-rpc.publicnode.com",
   l1Explorer: "https://sepolia.etherscan.io/tx/",
-  l2ChainId: "0xa455",
+  l2ChainId: "0xce608",
   l2ChainName: "Veltrix Sepolia L2",
   l2RpcUrl: import.meta.env.VITE_L2_RPC_URL || "https://veltrix-rpc.404piyush.me",
   l2ExplorerUrl: import.meta.env.VITE_L2_EXPLORER_URL || "https://veltrix-explorer.404piyush.me/tx/",
   l2ExplorerRoot: import.meta.env.VITE_L2_EXPLORER_ROOT || "https://veltrix-explorer.404piyush.me",
-  l2NativeName: import.meta.env.VITE_L2_NATIVE_NAME || "Ether",
-  l2NativeSymbol: import.meta.env.VITE_L2_NATIVE_SYMBOL || "ETH",
+  l2NativeName: import.meta.env.VITE_L2_NATIVE_NAME || "Veltrix",
+  l2NativeSymbol: import.meta.env.VITE_L2_NATIVE_SYMBOL || "VEL",
   l2NativeDecimals: Number(import.meta.env.VITE_L2_NATIVE_DECIMALS || "18"),
   optimismPortal: import.meta.env.VITE_OPTIMISM_PORTAL || "0x9d6954E55297f9ae78e5c0dc2353c18b31aeA0b3",
   l2ToL1MessagePasser: import.meta.env.VITE_L2_MESSAGE_PASSER || "0x4200000000000000000000000000000000000016",
@@ -91,13 +91,13 @@ const encodeInitiateWithdrawal = ({ to, gasLimit }) => {
 const parseEtherInput = (value) => {
   const trimmed = value.trim();
   if (!/^\d+(\.\d{0,18})?$/.test(trimmed)) {
-    throw new Error("Enter a valid ETH amount with up to 18 decimals.");
+    throw new Error(`Enter a valid ${BRIDGE_CONFIG.l2NativeSymbol} amount with up to 18 decimals.`);
   }
 
   const [whole, fraction = ""] = trimmed.split(".");
   const wei = BigInt(whole || "0") * 10n ** 18n + BigInt(fraction.padEnd(18, "0"));
   if (wei <= 0n) {
-    throw new Error("Enter an amount greater than 0 ETH.");
+    throw new Error(`Enter an amount greater than 0 ${BRIDGE_CONFIG.l2NativeSymbol}.`);
   }
   return wei;
 };
@@ -169,16 +169,8 @@ const switchNetwork = async (chainId) => {
       throw error;
     }
 
-    try {
-      const symbol = await addL2ChainToWallet(provider, BRIDGE_CONFIG.l2NativeSymbol);
-      return { added: true, symbol };
-    } catch (addError) {
-      if (BRIDGE_CONFIG.l2ChainId === "0xa455" && BRIDGE_CONFIG.l2NativeSymbol.toLowerCase() !== "peggle") {
-        const symbol = await addL2ChainToWallet(provider, "peggle");
-        return { added: true, symbol };
-      }
-      throw addError;
-    }
+    const symbol = await addL2ChainToWallet(provider, BRIDGE_CONFIG.l2NativeSymbol);
+    return { added: true, symbol };
   }
 };
 
@@ -478,7 +470,7 @@ function App() {
         type: "L1 deposit",
         hash: txHash,
         href: `${BRIDGE_CONFIG.l1Explorer}${txHash}`,
-        detail: `${depositAmount} ETH sent to OptimismPortal`,
+        detail: `${depositAmount} ${BRIDGE_CONFIG.l2NativeSymbol} sent to OptimismPortal`,
       });
       alertSuccess("Deposit submitted successfully.", txHash, BRIDGE_CONFIG.l1Explorer);
       setBridgeStatus("ok", "Deposit submitted", "Wait for Sepolia derivation; L2 balance credits after the deposit block becomes safe.");
@@ -512,7 +504,7 @@ function App() {
         type: "L2 withdrawal",
         hash: txHash,
         href: `${BRIDGE_CONFIG.l2ExplorerUrl}${txHash}`,
-        detail: `${withdrawAmount} ETH withdrawal initiated`,
+        detail: `${withdrawAmount} ${BRIDGE_CONFIG.l2NativeSymbol} withdrawal initiated`,
       });
       setLastWithdrawalTx(txHash);
       alertSuccess("Withdrawal initiated successfully.", txHash, BRIDGE_CONFIG.l2ExplorerUrl);
@@ -624,15 +616,14 @@ function App() {
         <section className="section card" id="bridge">
           <div className="section-header">
             <div>
-              <h1>Bridge ETH between Sepolia and Veltrix L2</h1>
+              <h1>Bridge {BRIDGE_CONFIG.l2NativeSymbol} between Sepolia and Veltrix L2</h1>
               <p>
                 Connect wallet, deposit or withdraw, then prove and finalize directly from chain-derived withdrawal lifecycle
                 state.
               </p>
               <p className="chain-warning">
-                Wallet warning in your screenshot is expected: chain ID <strong>42069</strong> is already claimed in public
-                wallet metadata as pegglecoin/peggle. Keep the Veltrix RPC URL and approve only if it matches
-                <strong> veltrix-rpc.404piyush.me</strong>.
+                Veltrix now uses chain ID <strong>845320 (0xce608)</strong> to avoid wallet metadata conflicts. Approve network
+                add requests only when RPC matches <strong>veltrix-rpc.404piyush.me</strong>.
               </p>
             </div>
             <div className="network-tags">
@@ -685,7 +676,7 @@ function App() {
           <BridgeCard
             icon={ArrowDownToLine}
             title="Deposit to Veltrix"
-            description="Send ETH from Sepolia into the same wallet on Veltrix L2 through OptimismPortal."
+            description={`Send ${BRIDGE_CONFIG.l2NativeSymbol} from Sepolia into the same wallet on Veltrix L2 through OptimismPortal.`}
             amount={depositAmount}
             setAmount={setDepositAmount}
             actionLabel="Deposit from Sepolia"
@@ -791,7 +782,7 @@ function BalanceCard({ icon: Icon, label, value, detail }) {
     <div className="balance-card">
       <Icon size={18} />
       <span>{label}</span>
-      <strong>{value ? `${value} ETH` : "--"}</strong>
+      <strong>{value ? `${value} ${BRIDGE_CONFIG.l2NativeSymbol}` : "--"}</strong>
       <small>{detail}</small>
     </div>
   );
@@ -813,7 +804,7 @@ function BridgeCard({ icon: Icon, title, description, amount, setAmount, actionL
         Amount
         <div className="amount-input">
           <input value={amount} onChange={(event) => setAmount(event.target.value)} inputMode="decimal" />
-          <span>ETH</span>
+          <span>{BRIDGE_CONFIG.l2NativeSymbol}</span>
         </div>
       </label>
       <button className="primary-action" type="button" disabled={pending} onClick={onSubmit}>
