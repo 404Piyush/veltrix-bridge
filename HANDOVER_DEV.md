@@ -1,21 +1,32 @@
 # Veltrix Bridge - Developer Handover
 
-## 🌉 Application State
-- **Target Network:** Veltrix Sepolia L2
-- **Chain ID:** `0xce608`
-- **RPC:** `https://veltrix-rpc.404piyush.me`
+## Current State
+- Target network: `Veltrix Sepolia L2`
+- Chain ID: `0xce608`
+- RPC: `https://veltrix-rpc.404piyush.me`
+- Frontend: React + Vite
+- Production: Vercel
 
-## 🛠️ Recent Changes
-1. **Network Alignment:** Updated `VITE_L2_CHAIN_ID` to `0xce608` across all config files.
-2. **UI Cleanup:** Removed hardcoded developer warnings and obstructive chain-id banners from `src/App.jsx`.
-3. **OptimismPortal Update:** Verified frontend connects to the newly deployed Portal on Sepolia.
-4. **Production Build:** A fresh `npm run build` has been generated and validated.
+## Done
+1. Aligned bridge config with chain ID `0xce608`.
+2. Normalized the native symbol to `VEL` across source and docs.
+3. Removed old developer warnings and banner copy from the UI.
+4. Verified the frontend can talk to the current Sepolia-backed portal path.
+5. Built and deployed the bridge app to production.
 
-## 🚀 Deployment
-- **Repo:** `404Piyush/veltrix-bridge`
-- **Frontend:** React + Vite.
-- **Env Vars:** Ensure `VITE_L2_CHAIN_ID=0xce608` and `VITE_L2_NATIVE_SYMBOL=VEL` are set in your CI/CD (Vercel).
+## Deployment
+- Repo: `404Piyush/veltrix-bridge`
+- Required env vars:
+  - `VITE_L2_CHAIN_ID=0xce608`
+  - `VITE_L2_NATIVE_SYMBOL=VEL`
+  - `VITE_L2_RPC_URL=https://veltrix-rpc.404piyush.me`
 
-## 🚧 Next for Dev
-- Verify L1 -> L2 deposit flow using the updated UI.
-- Test the "Withdrawal Lifecycle" panel once the Proposer has posted the first few output roots.
+## Key Files
+- `src/App.jsx`: bridge UI and wallet flow
+- `README.md`: deployment and runtime notes
+- `HANDOVER_DEV.md`: current handoff state
+
+## Remaining
+- Verify L1 to L2 deposit flow against the current live chain end to end.
+- Add proof and finalization UI for withdrawals.
+- Improve error handling and lifecycle status display around deposit/withdraw steps.
